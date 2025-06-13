@@ -32,7 +32,7 @@ class Discriminator(nn.Module):
             nn.Sigmoid()
         )
 
-        def forward(self, input):
+    def forward(self, input):
             output = self.network(input)
             return output.view(-1, 1).squeeze(0)
 
@@ -78,11 +78,8 @@ def create_noise(batch_size, z_size, mode_z):
    return input_z  
 
 image_size = (28, 28)
-z_size = 20
-gen_hidden_layers = 1
-gen_hidden_size = 100
-disc_hidden_layers = 1
-disc_hidden_size = 100
+z_size = 100
+
 from torch.utils.data import DataLoader
 batch_size = 32
 dataloader = DataLoader(mnist_dataset, batch_size, shuffle=True)
