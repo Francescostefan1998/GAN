@@ -36,8 +36,6 @@ class Discriminator(nn.Module):
             output = self.network(input)
             return output.view(-1, 1).squeeze(0)
 
-
-
 import torch
 print(torch.__version__)
 print("GPU Available:", torch.cuda.is_available())
@@ -55,7 +53,7 @@ transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean
 mnist_dataset = torchvision.datasets.MNIST(root=image_path, train=True, transform=transform, download=True)
 example, lable = next(iter(mnist_dataset))
 print(f'Min: {example.min()} Max: {example.max()}')
-print(example.shape)  
+print(example.shape)
 
 z_size = 100
 image_size  = (28, 28)
@@ -75,7 +73,7 @@ def create_noise(batch_size, z_size, mode_z):
       input_z = torch.rand(batch_size, z_size, 1 ,1 )* 2 -1
    elif mode_z == 'normal':
       input_z = torch.randn(batch_size, z_size, 1, 1)
-   return input_z  
+   return input_z
 
 image_size = (28, 28)
 z_size = 100
@@ -109,7 +107,7 @@ def d_train(x):
    d_labels_real = torch.ones(batch_size, 1, device=device)
    d_proba_real = disc_model(x)
    d_loss_real = loss_fn(d_proba_real, d_labels_real)
-   input_z = create_noise(batch_size, z_size, mode_z).to(device) 
+   input_z = create_noise(batch_size, z_size, mode_z).to(device)
    g_output = gen_model(input_z)
    d_proba_fake = disc_model(g_output)
    d_labels_fake = torch.zeros(batch_size, 1, device=device)
@@ -119,7 +117,8 @@ def d_train(x):
    d_optimizer.step()
    return d_loss.data.item(), d_proba_real.detach(), d_proba_fake.detach()
 
-fixed_z = create_noise(batch_size, z_size, mode_z)
+# FIX: Move fixed_z to the same device as the model
+fixed_z = create_noise(batch_size, z_size, mode_z).to(device)
 mnist_dl = DataLoader(mnist_dataset, batch_size = batch_size, shuffle=True, drop_last=True)
 epoch_samples = []
 all_d_losses = []
@@ -133,7 +132,6 @@ def create_samples(g_model, input_z):
   images = torch.reshape(g_output, (batch_size, *image_size))
   return (images+1)/2.0
 
-
 torch.manual_seed(1)
 for epoch in range(1, num_epochs+1):
    d_losses, g_losses = [], []
@@ -143,8 +141,9 @@ for epoch in range(1, num_epochs+1):
       d_loss, d_proba_real, d_proba_fake = d_train(x)
       d_losses.append(d_loss)
       g_losses.append(g_train(x))
-    
-   print(f'Epoch {epoch:03d} | Avg Losses >> G/D {torch.FloadTensor(d_losses).mean():.4f}/{torch.FloatTensor(d_losses).mean():.4f}')
+
+   # FIX: Corrected the print statement to show both G and D losses separately
+   print(f'Epoch {epoch:03d} | Avg Losses >> G/D {torch.FloatTensor(g_losses).mean():.4f}/{torch.FloatTensor(d_losses).mean():.4f}')
    gen_model.eval()
    epoch_samples.append(create_samples(gen_model, fixed_z).detach().cpu().numpy())
 
@@ -153,13 +152,13 @@ selected_epochs = [1, 2, 4, 10, 50, 100]
 fig = plt.figure(figsize=(10, 14))
 for i,e in enumerate(selected_epochs):
    for j in range(5):
-      ax = fig.add_subplots(6, 5, i*5+j+1)
+      # FIX: Corrected add_subplot (not add_subplots)
+      ax = fig.add_subplot(6, 5, i*5+j+1)
       ax.set_xticks([])
       ax.set_yticks([])
       if j == 0:
          ax.text(-0.06, 0.5, f'Epoch {e}', rotation=90, size = 18, color='red', horizontalalignment='right', verticalalignment='center', transform=ax.transAxes)
-         image = epoch_samples[e-1][j]
-         ax.imshow(image, cmap='gray_r')
+      image = epoch_samples[e-1][j]
+      ax.imshow(image, cmap='gray_r')
 
 plt.show()
-
