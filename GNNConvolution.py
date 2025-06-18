@@ -32,3 +32,67 @@ f_in, f_out = X.shape[1], 6
 W_1 = np.random.rand(f_in, f_out)
 W_2 = np.random.rand(f_in, f_out)
 h = np.dot(X, W_1) + np.dot(np.dot(A, X), W_2)
+
+# Defining the NodeNetwork model
+import networkx as nx
+import torch
+from torch.nn.parameter import Parameter
+import numpy as np
+import math
+import torch.nn.functional as F
+
+class NodeNetwork(torch.nn.Module):
+    def __init__(self, input_features):
+        super().__init__()
+        self.conv_1 = BasicGraphConvolutionLayer(input_features, 32) # here is where the magic formula should happen
+        self.conv_2 = BasicGraphConvolutionLayer(32, 32)
+        self.fc_1 = torch.nn.Linear(32, 16)
+        self.out_layer = torch.nn.Linear(16, 2)
+
+    def forward(self, X, A, batch_mat):
+        x = F.relu(self.conv_1(X, A))
+        x = F.relu(self.conv_2(x, A))
+        output = global_sum_pool(x, batch_mat)
+        output = self.fc_1(output)
+        output = self.out_layer(output)
+        return F.softmax(output, dim=1)
+    
+
+class BasicGraphConvolutionLayer(torch.nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.W2 = Parameter(torch.rand((in_channels, out_channels), dtype=torch.float32))
+        self.W1 = Parameter(torch.rand((in_channels, out_channels), dtype=torch.float32))
+        self.bias = Parameter(torch.zeros(out_channels, dtype = torch.float32))
+    def forward(self, X, A):
+        potential_msgs = torch.mm(X, self.W2)
+        propagated_msgs = torch.mm(A, potential_msgs)
+        root_update = torch.mm(X, self.W1)
+        output = propagated_msgs + root_update + self.bias
+        return output
+
+print('X.shape:', X.shape)
+print('A.shape:', A.shape)
+basiclayer = BasicGraphConvolutionLayer(3, 8)
+out = basiclayer(X = torch.tensor(X, dtype=torch.float32), A = torch.tensor(A, dtype=torch.float32))
+print('Output shape:', out.shape)
+
+def global_sum_pool(X, batch_mat):
+    if batch_mat is None or batch_mat.dime() == 1:
+        return torch.sum(X, dim=0).unsqueeze(0)
+    else:
+        return torch.mm(batch_mat, X)
+
+def get_batch_tensor(graph_sizes): # graph_sizes a list with the number of node in each graph in a batch
+    starts = [sum(graph_sizes[:idx]) for idx in range(len(graph_sizes))] # calculate the starting index of the graph based from the concatenated node 
+    stops = [starts[idx] + graph_sizes[idx] for idx in range(len(graph_sizes))] # same for the stopping index
+    tot_len = sum(graph_sizes) # total number of nodes in the whole batch
+    batch_size = len(graph_sizes) # number of graph in the batch
+    batch_mat = torch.zeros([batch_size, tot_len]).float() # creating a 0 matrix of shape [batch_isze, total nodes]
+    for idx, starts_and_stops in enumerate(zip(starts, stops)):
+        start = starts_and_stops[0]
+        stop = starts_and_stops[1]
+        batch_mat[idx, start:stop] = 1 # set the corresponding node for that graph to one and the other to 0
+    return batch_mat
