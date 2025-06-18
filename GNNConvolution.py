@@ -24,3 +24,11 @@ def build_graph_color_label_representation(G, mapping_dict):
 
 X = build_graph_color_label_representation(G, {green:0, blue:1, orange:2})
 print(X)
+
+color_map = nx.get_node_attributes(G, 'color').values()
+nx.draw(G, with_labels = True, node_color=color_map)
+
+f_in, f_out = X.shape[1], 6
+W_1 = np.random.rand(f_in, f_out)
+W_2 = np.random.rand(f_in, f_out)
+h = np.dot(X, W_1) + np.dot(np.dot(A, X), W_2)
