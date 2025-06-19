@@ -96,3 +96,25 @@ def get_batch_tensor(graph_sizes): # graph_sizes a list with the number of node 
         stop = starts_and_stops[1]
         batch_mat[idx, start:stop] = 1 # set the corresponding node for that graph to one and the other to 0
     return batch_mat
+
+# batch is  a list of dictionaries each containing the representation and label of a graph
+
+def collate_graphs(batch):
+    adj_mats = [graph['A'] for graph in batch] # Get all the adjacency matrix and put them in a list
+    sizes = [A.size(0) for A in adj_mats] # Get the number of nodes in each graph
+    tot_size = sum(sizes) # Total number of node across all the batches in the graph
+    # create batch matrix
+    batch_mat = get_batch_tensor(sizes) # build the batch matrix (function above)
+    # combine feature matrix
+    feat_mats = torch.cat([graph['X'] for graph in batch], dim = 0) # Concatenate all the feature matrices X from each graph into [tot_size, feature_dimension] matrix
+    # combine labels
+    labels = torch.zeros([tot_size, tot_size], dtype=torch.float32) # Create a placeholder labels
+    # combine adjacency matrices
+    batch_adj = torch.zeros([tot_size, tot_size], dtype=torch.float32) # Initialize a big matrix to hold all the Adjacency matrix in the correct block position
+    accum = 0
+    for adj in adj_mats:
+        g_size = adj.shape[0] # gets its size
+        batch_adj[accum:accum+g_size, accum:accum+g_size] = adj # insert it into the right block in the big batch_adj matrix
+        accum = accum + g_size # update it to shift to the next block
+    repr_and_label = {'A': batch_adj, 'X': feat_mats, 'y': labels, 'batch': batch_mat} # pack everything into a dictionary
+    return repr_and_label # return the batch ready data
