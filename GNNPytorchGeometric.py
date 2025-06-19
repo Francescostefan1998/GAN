@@ -20,3 +20,40 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 data.to(device)
 data.new_attribute.is_cuda
 print(data.new_attribute.is_cuda)
+
+class ExampleNet(torch.nn.Module):  
+    def __init__(self, num_node_features, num_edge_features):
+        super().__init__()
+
+        # MLP for conv1: maps edge features to a (num_node_features x 32) weight matrix
+        # Used to generate filters dynamically per edge in the first NNConv
+        conv1_net = nn.Sequential(
+            nn.Linear(num_edge_features, 32),  # edge feature input → hidden size
+            nn.ReLU(),                         # non-linearity
+            nn.Linear(32, num_node_features * 32)  # output a flattened weight matrix
+        )
+
+        # MLP for conv2: maps edge features to a (32 x 16) weight matrix
+        # Same idea as above but for the second layer
+        conv2_net = nn.Sequential(
+            nn.Linear(num_edge_features, 32),
+            nn.ReLU(),
+            nn.Linear(32, 32 * 16)
+        )
+
+        # First NNConv layer:
+        # Input: node features of dim `num_node_features`
+        # Output: 32-dimensional node embeddings
+        self.conv1 = NNConv(num_node_features, 32, conv1_net)
+
+        # Second NNConv layer:
+        # Input: 32-dim node features from previous layer
+        # Output: 16-dimensional node embeddings
+        self.conv2 = NNConv(32, 16, conv2_net)
+
+        # Fully connected layer to process graph-level representation
+        # Usually applied after pooling (like global_add_pool)
+        self.fc_1 = nn.Linear(16, 32)
+
+        # Final output layer (e.g., for regression or binary classification)
+        self.out = nn.Linear(32, 1)
