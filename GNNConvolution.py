@@ -129,3 +129,42 @@ def get_graph_dict(G, mapping_dict):
     # kludge since there is not specific task for this example
     y = torch.tensor([[1, 0]]).float()
     return {'A':A, 'X':X, 'y':y, 'batch':None}
+
+# building 4 graphs to threat as a dataset
+blue, orange, green = "#1f77b4", "#ff7f0e",  "#2ca02c"
+mapping_dict = {green:0, blue:1, orange:2}
+G1 = nx.Graph()
+G1.add_nodes_from([
+    (1, {"color": blue}),
+    (2, {"color": orange}),
+    (3, {"color": blue}),
+    (4, {"color": green})
+])
+G1.add_edges_from([(1,2), (2,3), (1,3), (3,4)])
+G2 = nx.Graph()
+G2.add_nodes_from([
+    (1, {"color": green}),
+    (2, {"color": green}),
+    (3, {"color": orange}),
+    (4, {"color": orange}),
+    (5, {"color": blue})
+])
+G2.add_edges_from([(2,3), (3,4), (3,1), (5,1)])
+G3 = nx.Graph()
+G3.add_nodes_from([
+    (1, {"color": orange}),
+    (2, {"color": orange}),
+    (3, {"color": green}),
+    (4, {"color": green}),
+    (5, {"color": blue}),
+    (6, {"color": orange})
+])
+G3.add_edges_from([(2,3), (3,4), (3,1), (5,1), (2,5), (6,1)])
+G4 = nx.Graph()
+G4.add_nodes_from([
+    (1, {"color": blue}),
+    (2, {"color": blue}),
+    (3, {"color": green})
+])
+G4.add_edges_from([(1,2), (2,3)])
+graph_list = [get_graph_dict(graph, mapping_dict) for graph in [G1, G2, G3, G4]]
