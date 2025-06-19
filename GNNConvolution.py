@@ -168,3 +168,32 @@ G4.add_nodes_from([
 ])
 G4.add_edges_from([(1,2), (2,3)])
 graph_list = [get_graph_dict(graph, mapping_dict) for graph in [G1, G2, G3, G4]]
+
+from torch.utils.data import Dataset
+class ExampleDataset(Dataset):
+    # Simple pytorch dataset that will use our list of graphs
+    def __init__(self, graph_list):
+        self.graphs = graph_list
+    def __len__(self):
+        return len(self.graphs)
+    def __getitem__(self, idx):
+        mol_rep = self.graphs[idx]
+        return mol_rep
+    
+from torch.utils.data import DataLoader
+dset = ExampleDataset(graph_list)
+# Note how we use our custom collate function
+loader = DataLoader(
+    dset, batch_size=2, shuffle=False, collate_fn = collate_graphs)
+
+node_features = 3
+net = NodeNetwork(node_features)
+batch_results = []
+for b in loader:
+    batch_results.append(
+        net(b['X'], b['A'], b['batch']).detach())
+    
+G1_rep = dset[1]
+G1_single = net(G1_rep['X'], G1_rep['A'], G1_rep['batch']).detach()
+G1_batch = batch_results[0][1]
+torch.add(torch.isclose(G1_single, G1_batch))
