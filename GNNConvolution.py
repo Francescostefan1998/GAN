@@ -118,3 +118,14 @@ def collate_graphs(batch):
         accum = accum + g_size # update it to shift to the next block
     repr_and_label = {'A': batch_adj, 'X': feat_mats, 'y': labels, 'batch': batch_mat} # pack everything into a dictionary
     return repr_and_label # return the batch ready data
+
+# builds a dictionary representation that we will use later
+def get_graph_dict(G, mapping_dict):
+    # Function builds dictionary representation of graph G
+    A = torch.from_numpy(np.asarray(nx.adjacency_matrix(G).todense())).float()
+    # build_graph_color_label_representation()
+    # was introduced with the first example graph
+    X = torch.from_numpy(build_graph_color_label_representation(G, mapping_dict)).float()
+    # kludge since there is not specific task for this example
+    y = torch.tensor([[1, 0]]).float()
+    return {'A':A, 'X':X, 'y':y, 'batch':None}
