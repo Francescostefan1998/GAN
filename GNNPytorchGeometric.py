@@ -57,3 +57,16 @@ class ExampleNet(torch.nn.Module):
 
         # Final output layer (e.g., for regression or binary classification)
         self.out = nn.Linear(32, 1)
+
+    def forward(self, data):
+        batch, x, edge_index, edge_attr = (
+            data.batch, data.x, data.edge_index, data.edge_attr
+        )
+        # first graph conv layer
+        x = F.relu(self.conv1(x, edge_index, edge_attr))
+        # second graph conv layer
+        x = F.relu(self.conv2(x, edge_index, edge_attr))
+        x = global_add_pool(x, batch)
+        x = F.relu(self.fc_1(x))
+        output = self.out(x)
+        return output
